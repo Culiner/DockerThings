@@ -52,6 +52,25 @@ RUN conda install scikit-learn
 RUN conda install -c conda-forge fbprophet
 RUN conda install -c plotly plotly=4.0.0
 
+# 创建基础路径
+RUN (mkdir /data/rpmbuild; \
+    mkdir /data/Gopath)
+
+# 安装go
+RUN (yum install -y gcc libtool make git wget && \
+    yum clean all)
+RUN wget -c https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz && \
+    tar -C /usr/local/ -zxvf go1.15.2.linux-amd64.tar.gz && rm -rf /go1.15.2.linux-amd64.tar.gz
+ENV PATH=$PATH:$GOPATH/bin \
+    GOPATH=/data/Gopath
+RUN cp /usr/local/go/bin/go /usr/local/bin && go get -u -v github.com/jteeuwen/go-bindata/... && go get -u -v github.com/golang/protobuf/protoc-gen-go && cp /data/Gopath/bin/* /usr/local/bin
+
+# 安装 rpmbuild
+RUN yum install -y rpmdevtools
+RUN (rpmdev-setuptree; \
+    sed -i 's/\/usr\/lib\/rpm\/brp-python-bytecompile/#\/usr\/lib\/rpm\/brp-python-bytecompile/g' /usr/lib/rpm/redhat/macros; \
+    sed -i 's/%(echo \$HOME)/\/data/g' ~/.rpmmacros)
+
 # 设置时区
 # ARG TZ=UTC
 ARG TZ=Asia/Shanghai
@@ -61,6 +80,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 COPY docker-entrypoint.sh /usr/sbin/docker-entrypoint.sh
 ENTRYPOINT ["/usr/sbin/docker-entrypoint.sh"]
 RUN chmod +x /usr/sbin/docker-entrypoint.sh
+
+WORKDIR /data
 
 VOLUME [ "/sys/fs/cgroup" ]
 CMD ["/usr/sbin/init"]
