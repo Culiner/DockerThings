@@ -71,6 +71,21 @@ RUN (rpmdev-setuptree; \
     sed -i 's/\/usr\/lib\/rpm\/brp-python-bytecompile/#\/usr\/lib\/rpm\/brp-python-bytecompile/g' /usr/lib/rpm/redhat/macros; \
     sed -i 's/%(echo \$HOME)/\/data/g' ~/.rpmmacros)
 
+# 安装 nodejs
+RUN yum -y install gcc openssl-devel gcc-c++ compat-gcc-34 compat-gcc-34-c++
+RUN (cd /usr/local; \
+    wget https://nodejs.org/dist/v10.22.1/node-v10.22.1-linux-x64.tar.xz; \
+    tar -xvf node-v10.22.1-linux-x64.tar.xz; \
+    mv node-v10.22.1-linux-x64 nodejs; )
+RUN (ln -s /usr/local/nodejs/bin/npm /usr/local/bin/; \
+    ln -s /usr/local/nodejs/bin/node /usr/local/bin/)
+    
+# 安装gitbook
+RUN npm install -g gitbook-cli
+RUN ln -s /usr/local/nodejs/bin/* /usr/sbin/
+RUN gitbook -V
+RUN sed -i 's/confirm: true/confirm: false/g' ~/.gitbook/versions/3.2.3/lib/output/website/copyPluginAssets.js
+
 # 设置时区
 # ARG TZ=UTC
 ARG TZ=Asia/Shanghai
