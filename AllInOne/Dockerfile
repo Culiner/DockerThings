@@ -1,6 +1,18 @@
-#docker run --rm -it -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 culiner/all-in-one:1.0.0 /bin/bash
-#docker run --rm -d -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 culiner/all-in-one:1.0.0
-#docker exec -it culiner-all-in-one /bin/bash
+# 构建：docker build -t all-in-one:1.0.0 .
+# 临时运行：docker run --rm -it -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:v20230705 /bin/bash
+# 后台运行：docker run --rm -d -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:v20230705
+# 进入：docker exec -it culiner-all-in-one /bin/bash
+
+# 阿里云：
+# 1. 登录阿里云Docker Registry
+# docker login --username=*@163.com registry.cn-hangzhou.aliyuncs.com
+# 2. 从Registry中拉取镜像
+# docker pull registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:[镜像版本号]
+# 3. 将镜像推送到Registry
+# docker login --username=*@163.com registry.cn-hangzhou.aliyuncs.com
+# docker tag [ImageId] registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:[镜像版本号]
+# docker push registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:[镜像版本号]
+
 FROM centos:7.5.1804
 ENV container docker
 
@@ -33,9 +45,7 @@ RUN yum install -y wget bzip2 gcc
 # RUN pip install --upgrade pip
 
 # 安装 Anaconda3
-RUN (wget --quiet https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh -O ~/anaconda.sh && \
-         /bin/bash ~/anaconda.sh -b -p /opt/conda && \
-         rm ~/anaconda.sh;)
+RUN (wget --quiet https://repo.continuum.io/archive/Anaconda3-2023.03-1-Linux-x86_64.sh -O ~/anaconda.sh && /bin/bash ~/anaconda.sh -b -p /opt/conda && rm ~/anaconda.sh)
 ENV PATH=$PATH:/opt/conda/bin
 RUN conda update --all
 
@@ -43,14 +53,12 @@ RUN conda update --all
 # jupyter notebook --ip=0.0.0.0 --no-browser --allow-root
 RUN conda install -c conda-forge libsodium
 RUN conda install -c conda-forge jupyter notebook
-RUN conda install tornado=5.1.1
+RUN conda install tornado
 RUN (jupyter notebook --generate-config; \
     echo "c.NotebookApp.token = ''" >> /root/.jupyter/jupyter_notebook_config.py; )
 
 # 安装工具库
 RUN conda install scikit-learn
-RUN conda install -c conda-forge fbprophet
-RUN conda install -c plotly plotly=4.0.0
 
 # 创建基础路径
 RUN (mkdir /data/rpmbuild; \
@@ -59,11 +67,11 @@ RUN (mkdir /data/rpmbuild; \
 # 安装go
 RUN (yum install -y gcc libtool make git wget && \
     yum clean all)
-RUN wget -c https://storage.googleapis.com/golang/go1.15.2.linux-amd64.tar.gz && \
-    tar -C /usr/local/ -zxvf go1.15.2.linux-amd64.tar.gz && rm -rf /go1.15.2.linux-amd64.tar.gz
+RUN wget -c https://storage.googleapis.com/golang/go1.20.5.linux-amd64.tar.gz && \
+    tar -C /usr/local/ -zxvf go1.20.5.linux-amd64.tar.gz && rm -rf /go1.20.5.linux-amd64.tar.gz
 ENV PATH=$PATH:$GOPATH/bin \
     GOPATH=/data/Gopath
-RUN cp /usr/local/go/bin/go /usr/local/bin && go get -u -v github.com/jteeuwen/go-bindata/... && go get -u -v github.com/golang/protobuf/protoc-gen-go && cp /data/Gopath/bin/* /usr/local/bin
+RUN cp /usr/local/go/bin/go /usr/local/bin && go install github.com/jteeuwen/go-bindata/... && go install github.com/golang/protobuf/protoc-gen-go@latest && cp /data/Gopath/bin/* /usr/local/bin
 
 # 安装 rpmbuild
 RUN yum install -y rpmdevtools
@@ -81,10 +89,11 @@ RUN (ln -s /usr/local/nodejs/bin/npm /usr/local/bin/; \
     ln -s /usr/local/nodejs/bin/node /usr/local/bin/)
     
 # 安装gitbook
-RUN npm install -g gitbook-cli
-RUN ln -s /usr/local/nodejs/bin/* /usr/sbin/
-RUN gitbook -V
-RUN sed -i 's/confirm: true/confirm: false/g' ~/.gitbook/versions/3.2.3/lib/output/website/copyPluginAssets.js
+RUN (npm install -g gitbook-cli && ln -s /usr/local/nodejs/bin/* /usr/sbin/ && gitbook -V && sed -i 's/confirm: true/confirm: false/g' ~/.gitbook/versions/3.2.3/lib/output/website/copyPluginAssets.js)
+
+# 安装时序数据预测库（易安装失败）
+# RUN conda install -c conda-forge fbprophet
+# RUN conda install -c plotly plotly=4.0.0
 
 # 设置时区
 # ARG TZ=UTC
