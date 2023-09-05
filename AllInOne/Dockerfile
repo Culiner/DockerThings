@@ -1,4 +1,4 @@
-# 构建：docker build -t all-in-one:1.0.0 .
+# 构建：docker build -t all-in-one:v20230705 .
 # 临时运行：docker run --rm -it -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:v20230705 /bin/bash
 # 后台运行：docker run --rm -d -v ~/Programs:/data --name=culiner-all-in-one -p 8888:8888 registry.cn-hangzhou.aliyuncs.com/culiner/all-in-one:v20230705
 # 进入：docker exec -it culiner-all-in-one /bin/bash
@@ -90,6 +90,21 @@ RUN (ln -s /usr/local/nodejs/bin/npm /usr/local/bin/; \
     
 # 安装gitbook
 RUN (npm install -g gitbook-cli && ln -s /usr/local/nodejs/bin/* /usr/sbin/ && gitbook -V && sed -i 's/confirm: true/confirm: false/g' ~/.gitbook/versions/3.2.3/lib/output/website/copyPluginAssets.js)
+
+# 升级git
+COPY etc/wandisco-git.repo /etc/yum.repos.d/wandisco-git.repo
+RUN (rpm --import http://opensource.wandisco.com/RPM-GPG-KEY-WANdisco && yum install -y git)
+
+# 切换pip源，安装依赖
+# 中国科学技术大学 https://mirrors.ustc.edu.cn/pypi/web/simple
+# 清华大学 https://pypi.tuna.tsinghua.edu.cn/simple 
+# 华中科技大学 http://pypi.hustunique.com/simple
+# 中国科学院 https://pypi.mirrors.opencas.cn/simple
+# 阿里云 https://mirrors.aliyun.com/pypi/simple
+# 豆瓣  https://pypi.douban.com/simple
+RUN pip config set global.index-url https://mirrors.ustc.edu.cn/pypi/web/simple
+COPY etc/requirements.txt /etc/requirements.txt
+RUN pip install -r /etc/requirements.txt
 
 # 安装时序数据预测库（易安装失败）
 # RUN conda install -c conda-forge fbprophet
